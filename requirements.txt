@@ -1,0 +1,6 @@
+# Dépendances d'exécution (miroir de pyproject.toml)
+opencv-python-headless>=4.8
+Pillow>=10.0
+numpy>=1.26
+pandas>=2.1
+pytesseract>=0.3.10

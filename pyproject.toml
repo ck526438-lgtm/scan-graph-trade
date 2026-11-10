@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scan-graph-trade"
+version = "0.1.0"
+description = "Logiciel de trading intelligent qui analyse les captures d'écran de graphiques boursiers"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Christ" }]
+keywords = ["trading", "chandeliers japonais", "ocr", "opencv", "computer-vision", "analyse technique"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = [
+    "opencv-python-headless>=4.8",
+    "Pillow>=10.0",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pytesseract>=0.3.10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5"]
+ml = ["scikit-learn>=1.4", "easyocr>=1.7"]
+
+[project.scripts]
+sgt = "scan_graph_trade.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "BLE", "RUF"]

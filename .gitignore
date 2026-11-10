@@ -1,0 +1,61 @@
+# ── Python ─────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+ENV/
+
+# Tests / couverture / outils
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ── Node.js (future interface web) ──
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.next/
+.nuxt/
+
+# ── Secrets / config locale ─────────
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# ── Données & résultats générés ─────
+output/
+exports/
+*.log
+models/*.pt
+models/*.onnx
+data/raw/
+
+# ── IDE / OS ────────────────────────
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
