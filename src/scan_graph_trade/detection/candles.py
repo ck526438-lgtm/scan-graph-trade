@@ -110,20 +110,25 @@ class CandleDetector:
         segs.append((start, prev))
         return segs
 
-    def _geometry(self, m: np.ndarray, x0: int, x1: int):
+    def _geometry(self, m: np.ndarray, x0: int, x1: int, extent: np.ndarray | None = None):
         """Renvoie (top, bottom, body_top, body_bottom, left, right) ou None.
 
         Le corps est repéré par l'étendue horizontale de chaque ligne (et non le
         nombre de pixels), ce qui marche aussi pour les bougies creuses.
+        `extent` (optionnel) est le masque utilisé pour les extrémités des mèches.
         """
         sub = m[:, x0 : x1 + 1] > 0
-        rows = np.where(sub.any(axis=1))[0]
+        ext = sub if extent is None else extent[:, x0 : x1 + 1] > 0
+        rows = np.where(ext.any(axis=1))[0]
         if rows.size == 0 or rows[-1] - rows[0] + 1 < self.config.min_height:
             return None
         lefts = np.where(sub.any(axis=1), sub.argmax(axis=1), 0)
         rights = np.where(sub.any(axis=1), sub.shape[1] - 1 - sub[:, ::-1].argmax(axis=1), -1)
         spans = rights - lefts + 1
-        body_rows = np.where(spans >= max(1, int(spans.max() * 0.6)))[0]
+        widest = int(spans.max())
+        # au moins 2 px dès que la bougie est plus large que sa mèche (bougies de 3 px en dézoom)
+        threshold = 1 if widest <= 1 else max(2, int(np.ceil(widest * 0.6)))
+        body_rows = np.where(spans >= threshold)[0]
         btop, bbot = int(body_rows[0]), int(body_rows[-1])
         left = x0 + int(lefts[body_rows].min())
         right = x0 + int(rights[body_rows].max())
@@ -149,10 +154,11 @@ class CandleDetector:
         for x0, x1 in self._segments(fg):
             if not outline[:, x0 : x1 + 1].any():  # texte, étiquettes… sans contour de bougie
                 continue
-            g = self._geometry(fg, x0, x1)
+            g = self._geometry(fg, x0, x1, extent=outline)
             if not g:
                 continue
             top, bottom, btop, bbot, left, right = g
+            btop, bbot = max(btop, top), min(bbot, bottom)
             inner = fill[btop + 1 : bbot, left + 1 : right]
             bullish = True if inner.size == 0 else bool(np.count_nonzero(inner) < 0.5 * inner.size)
             raw.append((int((left + right) // 2), top, bottom, btop, bbot, bullish))

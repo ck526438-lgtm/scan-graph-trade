@@ -28,7 +28,9 @@ def _profiles() -> dict[str, DetectorConfig]:
         "default": DetectorConfig(),
         "mt5_green_on_black": DetectorConfig(
             name="mt5_green_on_black", mode="fill", outline_ranges=LIME, bear_fill_ranges=WHITE,
-            **_MT5_MARGINS,
+            # l'en-tête est blanc (sans contour vert) : pas besoin de marge haute,
+            # ce qui évite de tronquer les plus hautes mèches
+            **{**_MT5_MARGINS, "margin_top": 0},
         ),
         "mt5_black_on_white": DetectorConfig(
             name="mt5_black_on_white", mode="fill", outline_ranges=BLACK, bear_fill_ranges=BLACK,

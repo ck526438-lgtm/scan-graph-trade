@@ -22,6 +22,8 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("image", type=Path)
     a.add_argument("--profile", choices=PROFILE_NAMES, default="auto",
                    help="Schéma de couleurs (défaut : détection automatique)")
+    a.add_argument("--last", type=int, default=20, metavar="N",
+                   help="Afficher les figures des N dernières bougies (0 = toutes, défaut : 20)")
     a.add_argument("--no-ocr", action="store_true", help="Désactiver l'OCR (Tesseract)")
     a.add_argument("--json", type=Path, help="Exporter le résultat en JSON")
     a.add_argument("--csv", type=Path, help="Exporter les bougies en CSV")
@@ -33,7 +35,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Profil       : {res.profile}")
         print(f"Bougies      : {len(res.candles)}  (axe calibré : {'oui' if res.calibrated else 'non'})")
         print(f"Figures      : {len(res.patterns)}")
+        counts: dict[str, int] = {}
         for p in res.patterns:
+            counts[p.name] = counts.get(p.name, 0) + 1
+        if counts:
+            print("  " + ", ".join(f"{n} ×{k}" for n, k in sorted(counts.items(), key=lambda kv: -kv[1])))
+        start = len(res.candles) - args.last if args.last else 0
+        shown = [p for p in res.patterns if p.index >= start]
+        if args.last and shown:
+            print(f"Sur les {args.last} dernières bougies :")
+        for p in shown:
             print(f"  - #{p.index:<4} {p.name:<22} {p.direction:<8} {p.confidence:.0%}")
         if args.json:
             print(f"JSON  → {export_json(res, args.json)}")
