@@ -6,7 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .detection import CandleDetector, DetectorConfig
+from .detection import CandleDetector, DetectorConfig, auto_profile, get_profile
 from .models import AnalysisResult
 from .ocr import calibrate_price_axis, extract_text
 from .patterns import detect_patterns
@@ -21,12 +21,16 @@ def load_image(path: str | Path) -> np.ndarray:
 
 
 def analyze_image(image: np.ndarray, source: str = "<memory>", use_ocr: bool = True,
-                  config: DetectorConfig | None = None) -> AnalysisResult:
+                  config: DetectorConfig | None = None, profile: str = "auto") -> AnalysisResult:
+    """Analyse une capture. `profile` : "auto" (défaut) ou un nom de profil (ex. "mt5_green_on_black")."""
+    if config is None:
+        config = auto_profile(image) if profile == "auto" else get_profile(profile)
     calib = calibrate_price_axis(image) if use_ocr else None
     texts = extract_text(image) if use_ocr else []
     candles = CandleDetector(config).detect(image, to_price=calib)
     return AnalysisResult(source=source, candles=candles, patterns=detect_patterns(candles),
-                          texts=texts, calibrated=calib is not None)
+                          texts=texts, calibrated=calib is not None,
+                          profile=config.name)
 
 
 def analyze_file(path: str | Path, **kwargs) -> AnalysisResult:

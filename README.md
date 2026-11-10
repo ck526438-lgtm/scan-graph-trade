@@ -33,7 +33,8 @@
 
 | Module | Description | Statut |
 |---|---|---|
-| 🕯️ **Détection des chandeliers** | Segmentation couleur HSV (OpenCV), extraction OHLC par bougie | ✅ v0.1 |
+| 🕯️ **Détection des chandeliers** | Segmentation HSV (OpenCV), bougies pleines ou creuses, extraction OHLC | ✅ v0.1 |
+| 🟢 **MetaTrader 5** | Profils Green On Black / Black On White / couleurs perso, détection automatique | ✅ v0.2 |
 | 🔤 **OCR** | Lecture du texte (Tesseract) et calibration automatique de l'axe des prix | ✅ v0.1 |
 | 📐 **Figures en chandeliers** | Doji, marteau, étoile filante, avalement haussier/baissier, trois soldats blancs / trois corbeaux noirs | ✅ v0.1 |
 | 💾 **Export** | CSV (une ligne par bougie + figures) et JSON complet | ✅ v0.1 |
@@ -112,7 +113,7 @@ Figures      : 3
   - #47   doji                   neutral  60%
 ```
 
-Options : `--no-ocr` pour désactiver Tesseract (les valeurs restent alors en coordonnées pixel).
+Options : `--profile` pour forcer un schéma de couleurs, `--no-ocr` pour désactiver Tesseract (les valeurs restent alors en coordonnées pixel).
 
 ### En Python
 
@@ -126,6 +127,28 @@ for p in result.patterns:
 
 export_csv(result, "bougies.csv")
 ```
+
+### 🟢 MetaTrader 5
+
+Scan Graph Trade est optimisé pour les captures **MT5** (Fichier > Enregistrer sous image, ou capture d'écran classique). Le schéma de couleurs est **détecté automatiquement** :
+
+| Schéma MT5 (clic droit > Propriétés > Couleurs) | Profil | Comment les bougies sont reconnues |
+|---|---|---|
+| **Green On Black** (défaut) | `mt5_green_on_black` | Contour vert ; haussière **creuse**, baissière **pleine blanche** |
+| **Black On White** | `mt5_black_on_white` | Contour noir ; haussière **blanche**, baissière **noire** |
+| Couleurs perso vert / rouge | `mt5_colored` | Couleur du corps |
+
+```bash
+sgt analyze capture_mt5.png                        # détection automatique
+sgt analyze capture_mt5.png --profile mt5_green_on_black
+```
+
+Le logiciel ignore automatiquement l'en-tête (symbole, unité de temps), l'axe des prix, l'axe du temps, la grille et la ligne Bid. Il résiste aux captures compressées en JPEG (WhatsApp, Telegram).
+
+**Conseils pour de meilleurs résultats :**
+- capturez en **PNG** si possible et zoomez pour que les bougies fassent au moins 5 px de large ;
+- masquez les indicateurs de même couleur que les bougies (ou analysez une capture sans indicateurs) ;
+- gardez l'axe des prix visible : l'OCR s'en sert pour convertir les pixels en prix réels.
 
 ### Adapter les couleurs à votre plateforme
 

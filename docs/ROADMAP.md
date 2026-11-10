@@ -8,8 +8,9 @@
 
 ## v0.2 — Robustesse
 - [ ] Recadrage automatique de la zone graphique (suppression barres d'outils, axes)
-- [ ] Profils de couleurs prédéfinis (TradingView, MT4, MT5, cTrader)
-- [ ] Détection des thèmes clair/sombre
+- [x] Profils de couleurs MetaTrader 5 + détection automatique
+- [ ] Profils TradingView, MT4, cTrader
+- [x] Détection des thèmes clair/sombre (MT5)
 - [ ] Jeu de captures réelles annotées dans `assets/samples/`
 
 ## v0.3 — Indicateurs & figures chartistes

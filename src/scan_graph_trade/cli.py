@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import __version__
 from .analyzer import analyze_file
+from .detection import PROFILE_NAMES
 from .export import export_csv, export_json
 
 
@@ -19,14 +20,17 @@ def main(argv: list[str] | None = None) -> int:
 
     a = sub.add_parser("analyze", help="Analyser une capture d'écran")
     a.add_argument("image", type=Path)
+    a.add_argument("--profile", choices=PROFILE_NAMES, default="auto",
+                   help="Schéma de couleurs (défaut : détection automatique)")
     a.add_argument("--no-ocr", action="store_true", help="Désactiver l'OCR (Tesseract)")
     a.add_argument("--json", type=Path, help="Exporter le résultat en JSON")
     a.add_argument("--csv", type=Path, help="Exporter les bougies en CSV")
 
     args = parser.parse_args(argv)
     if args.command == "analyze":
-        res = analyze_file(args.image, use_ocr=not args.no_ocr)
+        res = analyze_file(args.image, use_ocr=not args.no_ocr, profile=args.profile)
         print(f"Source       : {res.source}")
+        print(f"Profil       : {res.profile}")
         print(f"Bougies      : {len(res.candles)}  (axe calibré : {'oui' if res.calibrated else 'non'})")
         print(f"Figures      : {len(res.patterns)}")
         for p in res.patterns:

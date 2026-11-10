@@ -52,6 +52,7 @@ class AnalysisResult:
     patterns: list[PatternMatch] = field(default_factory=list)
     texts: list[str] = field(default_factory=list)
     calibrated: bool = False
+    profile: str = "default"
 
     def to_dict(self) -> dict:
         return asdict(self)
