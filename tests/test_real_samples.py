@@ -16,10 +16,9 @@ def test_mt5_eurusd_m5_capture():
     assert 320 <= len(res.candles) <= 345  # ~332 bougies visibles
     bears = sum(not c.bullish for c in res.candles)
     assert 0.3 < bears / len(res.candles) < 0.5
-    # la plus haute mèche (sommet du graphique) n'est pas tronquée par l'en-tête
-    assert max(c.high for c in res.candles) >= res.candles[0].high and min(
-        c.x for c in res.candles if c.high == max(k.high for k in res.candles)
-    ) > 1300
+    # la plus haute mèche (sommet, x≈1340, y=16 px) n'est pas tronquée par l'en-tête
+    top = max(res.candles, key=lambda c: c.high)
+    assert top.x > 1300 and top.high >= 751 - 17
     # aucune bougie dans la zone transparente à droite du graphique
     assert max(c.x for c in res.candles) < 1505
     assert len(res.patterns) < 0.3 * len(res.candles)

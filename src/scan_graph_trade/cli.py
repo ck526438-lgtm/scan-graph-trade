@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
         for p in res.patterns:
             counts[p.name] = counts.get(p.name, 0) + 1
         if counts:
-            print("  " + ", ".join(f"{n} ×{k}" for n, k in sorted(counts.items(), key=lambda kv: -kv[1])))
+            print("  " + ", ".join(f"{n} x{k}" for n, k in sorted(counts.items(), key=lambda kv: -kv[1])))
         start = len(res.candles) - args.last if args.last else 0
         shown = [p for p in res.patterns if p.index >= start]
         if args.last and shown:
