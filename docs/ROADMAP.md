@@ -23,7 +23,12 @@
 - [x] Capture annotée, rapport Markdown
 - [x] Interface web glisser-déposer + API REST (FastAPI)
 
-## v0.4 — Plateformes
+## v0.4 — Applications ✅
+- [x] Application Windows `.exe` autonome (fenêtre native, Tesseract embarqué)
+- [x] Application Android `.apk` (Python embarqué, OCR ML Kit hors ligne, partage d'images)
+- [x] Construction et publication automatiques (GitHub Actions → Releases)
+
+## v0.5 — Plateformes
 - [ ] Profils TradingView, MT4, cTrader, applis mobiles de broker
 - [ ] Recadrage automatique de la zone graphique
 - [ ] Jeu de captures réelles annotées (vérité terrain) pour mesurer la précision
@@ -32,4 +37,3 @@
 - [ ] Modèle IA de classification des figures (entraîné sur les captures annotées)
 - [ ] Backtest du pronostic sur historique MT5 (taux de réussite par configuration)
 - [ ] Notifications (Telegram / e-mail)
-- [ ] Application bureau Windows (.exe)

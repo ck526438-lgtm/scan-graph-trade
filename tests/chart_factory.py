@@ -32,6 +32,9 @@ def zigzag_series(legs, bars_per_leg=12, start=1.1000, unit=0.0001, seed=1):
     return out
 
 
+LAST_LABELS: list[dict] = []  # positions des graduations du dernier graphique dessiné (OCR simulé)
+
+
 def draw_mt5(series, width=900, height=500, header="EURUSD,M5", decimals=4, scheme="green_on_black"):
     bg, outline, bull, bear, text = {
         "green_on_black": ((0, 0, 0), (0, 255, 0), (0, 0, 0), (255, 255, 255), (255, 255, 255)),
@@ -54,9 +57,12 @@ def draw_mt5(series, width=900, height=500, header="EURUSD,M5", decimals=4, sche
     while (top_p - bot_p) / step > 10:
         step *= 2
     p = np.ceil(bot_p / step) * step
+    LAST_LABELS.clear()
+    LAST_LABELS.append({"text": header.replace(",", ", "), "x": 6, "y": 4, "w": 90, "h": 12})
     while p < top_p:
         yy = y(p)
         cv2.line(img, (axis_x, yy), (axis_x + 4, yy), text, 1)
+        LAST_LABELS.append({"text": f"{p:.{decimals}f}", "x": axis_x + 7, "y": yy - 5, "w": 50, "h": 10})
         cv2.putText(img, f"{p:.{decimals}f}", (axis_x + 7, yy + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, text, 1,
                     cv2.LINE_AA)
         p += step

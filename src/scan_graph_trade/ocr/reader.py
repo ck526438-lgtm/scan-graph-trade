@@ -41,7 +41,44 @@ class AxisCalibration:
         return self.slope * y + self.intercept
 
 
+# --- moteur OCR externe (ex. Google ML Kit dans l'application Android) -----
+# fonction image_bgr -> [{"text", "x", "y", "w", "h"}] (mots, en pixels de l'image)
+_word_provider = None
+_cache: tuple[int, list[dict]] | None = None
+
+
+def set_word_provider(fn) -> None:
+    """Branche un OCR externe à la place de Tesseract (None pour revenir à Tesseract)."""
+    global _word_provider, _cache
+    _word_provider, _cache = fn, None
+
+
+def _words(image: np.ndarray) -> list[dict]:
+    global _cache
+    key = hash((image.shape, image[:: max(1, image.shape[0] // 64), :: max(1, image.shape[1] // 64)].tobytes()))
+    if _cache is None or _cache[0] != key:
+        try:
+            words = list(_word_provider(image) or [])
+        except Exception:  # noqa: BLE001 — un OCR défaillant ne doit pas bloquer l'analyse
+            words = []
+        _cache = (key, words)
+    return _cache[1]
+
+
+def _lines(words: list[dict]) -> list[str]:
+    rows: list[list[dict]] = []
+    for w in sorted(words, key=lambda w: (w["y"] + w["h"] / 2, w["x"])):
+        cy = w["y"] + w["h"] / 2
+        if rows and abs(cy - (rows[-1][0]["y"] + rows[-1][0]["h"] / 2)) <= max(4, w["h"] / 2):
+            rows[-1].append(w)
+        else:
+            rows.append([w])
+    return [" ".join(w["text"] for w in sorted(r, key=lambda w: w["x"])) for r in rows]
+
+
 def available() -> bool:
+    if _word_provider is not None:
+        return True
     if pytesseract is None:
         return False
     try:
@@ -65,6 +102,8 @@ def _prep(img: np.ndarray, scale: int = 3) -> np.ndarray:
 
 def extract_text(image: np.ndarray, lang: str = "eng") -> list[str]:
     """Extrait les lignes de texte (symbole, timeframe, valeurs d'indicateurs…)."""
+    if _word_provider is not None:
+        return _lines(_words(image))
     if not available():
         return []
     txt = pytesseract.image_to_string(image, lang=lang)
@@ -103,7 +142,13 @@ def read_header(image: np.ndarray) -> tuple[str | None, str | None, str]:
     if not available():
         return None, None, ""
     h, w = image.shape[:2]
-    strip = image[0 : max(18, min(30, h // 20)), 0 : min(w, 500)]
+    strip_h = max(18, min(30, h // 20))
+    if _word_provider is not None:
+        top = [wd for wd in _words(image) if wd["y"] < strip_h and wd["x"] < min(w, 500)]
+        txt = " ".join(_lines(top))
+        sym, tf = parse_header(txt)
+        return sym, tf, txt
+    strip = image[0:strip_h, 0 : min(w, 500)]
     txt = pytesseract.image_to_string(_prep(strip, 4), config="--psm 7")
     sym, tf = parse_header(txt)
     return sym, tf, txt.strip()
@@ -137,6 +182,8 @@ def calibrate_price_axis(image: np.ndarray, axis_fraction: float = 0.12,
         return None
     w = image.shape[1]
     x0 = axis_x + 1 if axis_x is not None else int(w * (1 - axis_fraction))
+    if _word_provider is not None:
+        return _calibrate_from_words([wd for wd in _words(image) if wd["x"] >= x0 - 2])
     band = image[:, x0:]
     if band.shape[1] < 8:
         return None
@@ -151,6 +198,25 @@ def calibrate_price_axis(image: np.ndarray, axis_fraction: float = 0.12,
             t = t.replace(",", ".")
             points.append(((top + height / 2) / scale, float(t)))
             decs.append(len(t.split(".")[1]) if "." in t else 0)
+    decimals = max(set(decs), key=decs.count) if decs else 5
+    return fit_axis(points, decimals)
+
+
+def _parse_price(text: str) -> tuple[float, int] | None:
+    t = text.strip().replace(" ", "").lstrip("-_").rstrip(".,")
+    if not _NUMBER.match(t):
+        return None
+    t = t.replace(",", ".")
+    return float(t), (len(t.split(".")[1]) if "." in t else 0)
+
+
+def _calibrate_from_words(words: list[dict]) -> AxisCalibration | None:
+    points, decs = [], []
+    for wd in words:
+        parsed = _parse_price(wd["text"])
+        if parsed:
+            points.append((wd["y"] + wd["h"] / 2, parsed[0]))
+            decs.append(parsed[1])
     decimals = max(set(decs), key=decs.count) if decs else 5
     return fit_axis(points, decimals)
 

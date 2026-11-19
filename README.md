@@ -13,7 +13,9 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue">
   <img alt="OpenCV" src="https://img.shields.io/badge/OpenCV-4.x-orange">
   <img alt="Licence" src="https://img.shields.io/badge/licence-MIT-green">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.3.0-blue">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.4.0-blue">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-.exe-0078D6">
+  <img alt="Android" src="https://img.shields.io/badge/Android-.apk-3DDC84">
 </p>
 
 ---
@@ -34,6 +36,17 @@
 
 > ⚠️ Scan Graph Trade est un **outil d'aide à l'analyse**. Il ne constitue pas un conseil en investissement. Le trading comporte un risque élevé de perte en capital.
 
+## 📥 Télécharger les applications
+
+Rendez-vous dans **[Releases](https://github.com/ck526438-lgtm/scan-graph-trade/releases/latest)** :
+
+| Plateforme | Fichier | Installation |
+|---|---|---|
+| 🪟 **Windows 10 / 11** | `ScanGraphTrade.exe` | Double-cliquez, rien à installer (OCR Tesseract inclus). Si SmartScreen s'affiche : « Informations complémentaires » → « Exécuter quand même ». |
+| 🤖 **Android 7+** | `ScanGraphTrade.apk` | Ouvrez le fichier sur le téléphone et autorisez l'installation depuis cette source. |
+
+Les deux applications analysent **sur l'appareil, hors ligne** : aucune capture n'est envoyée sur Internet. Sur Android, l'OCR utilise Google ML Kit (modèle intégré) et vous pouvez **partager** une capture depuis MetaTrader 5 ou la galerie directement vers Scan Graph Trade.
+
 ## ✨ Fonctionnalités
 
 | Module | Description | Statut |
@@ -49,6 +62,8 @@
 | 🎯 **Pronostic** | Confluence pondérée → ACHAT / VENTE / ATTENDRE, confiance, plan de trade, scénarios, avertissements | ✅ |
 | 🖼️ **Annotation** | Zones, obliques, pivots, figures, entrée / SL / TP dessinés sur la capture | ✅ |
 | 🖥️ **Interface web** | Glisser-déposer ou Ctrl+V d'une capture, rapport complet, exports | ✅ |
+| 🪟 **Application Windows** | `ScanGraphTrade.exe` autonome, fenêtre native, Tesseract embarqué | ✅ |
+| 🤖 **Application Android** | `ScanGraphTrade.apk` (Python embarqué via Chaquopy, OCR ML Kit, partage d'images) | ✅ |
 | 💾 **Export** | Rapport Markdown, JSON complet, CSV des bougies | ✅ |
 | 🧠 **Modèle IA** | Classification des figures par apprentissage automatique | 🔜 |
 | 🔔 **Alertes** | Notifications Telegram / e-mail | 🔜 |
@@ -66,8 +81,11 @@ scan-graph-trade/
 │   ├── patterns/            # Figures en chandeliers (avec contexte)
 │   ├── analysis/            # Indicateurs, structure, niveaux, figures chartistes, pronostic
 │   ├── report/              # Rapport texte/Markdown + annotation de la capture
-│   ├── web/                 # Interface web (FastAPI + page glisser-déposer)
+│   ├── web/                 # Interface web (FastAPI ou serveur local sans dépendance)
+│   ├── desktop.py           # Application de bureau (fenêtre native)
 │   └── export/              # Export CSV / JSON
+├── android/                 # Application Android (Kotlin + Chaquopy + ML Kit)
+├── packaging/windows/       # Construction de l'exe (PyInstaller)
 ├── tests/                   # Tests unitaires (pytest, graphiques synthétiques)
 ├── docs/                    # Architecture, roadmap
 ├── assets/
@@ -224,6 +242,30 @@ config = DetectorConfig(
 )
 result = analyze_file("capture.png", config=config)
 ```
+
+## 🏗️ Construire les applications
+
+Les deux applications sont construites automatiquement par GitHub Actions (`.github/workflows/apps.yml`) à chaque tag `v*` et publiées dans une Release :
+
+```bash
+git tag v0.4.0 && git push origin v0.4.0
+```
+
+En local :
+
+```bash
+# Windows (.exe) — sous Windows, avec Tesseract installé
+pip install . pywebview pyinstaller
+set TESSERACT_DIR=C:\Program Files\Tesseract-OCR
+pyinstaller packaging/windows/ScanGraphTrade.spec --noconfirm      # → dist/ScanGraphTrade.exe
+
+# Android (.apk) — JDK 17, SDK Android, Python 3.10 ; ou ouvrez le dossier android/ dans Android Studio
+cd android && gradle assembleRelease                                 # → app/build/outputs/apk/release/
+```
+
+Signature Android stable (facultatif) : ajoutez les secrets `SGT_KEYSTORE_BASE64`, `SGT_KEYSTORE_PASSWORD`, `SGT_KEY_ALIAS`, `SGT_KEY_PASSWORD` au dépôt. Sans eux, l'APK est signé avec une clé de debug (installable, mais une mise à jour peut demander de désinstaller l'ancienne version).
+
+Sans compiler : `pip install ".[desktop]"` puis `sgt-app` ouvre la même application de bureau.
 
 ## ✅ Tests
 

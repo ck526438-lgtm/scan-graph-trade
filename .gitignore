@@ -59,3 +59,11 @@ data/raw/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ── Applications (.exe / .apk) ──────
+android/.gradle/
+android/local.properties
+android/app/build/
+android/build/
+*.jks
+*.keystore

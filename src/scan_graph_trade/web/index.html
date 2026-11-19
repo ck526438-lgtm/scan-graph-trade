@@ -53,6 +53,17 @@
   td { padding: 4px 0; border-bottom: 1px solid var(--line); }
   td:last-child { text-align: right; }
   #status { color: var(--muted); }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+  @media (max-width: 600px) {
+    main { padding: 12px; gap: 12px; }
+    .panel { padding: 14px; }
+    header { padding: 12px 14px; }
+    header small { display: none; }
+    #drop { padding: 22px 12px; }
+    .verdict { font-size: 30px; }
+    .factor { grid-template-columns: 1fr 60px; }
+  }
   .hidden { display: none; }
 </style>
 </head>
@@ -68,11 +79,12 @@
 <main>
   <section class="panel">
     <div id="drop">
-      <strong>Glissez une capture de graphique ici</strong>
-      <p>ou cliquez pour choisir un fichier · ou collez-la avec Ctrl+V</p>
+      <strong id="dropTitle">Glissez une capture de graphique ici</strong>
+      <p id="dropHint">ou cliquez pour choisir un fichier · ou collez-la avec Ctrl+V</p>
       <p class="muted">MetaTrader 5 conseillé · laissez l'échelle des prix visible à droite pour obtenir de vrais prix</p>
       <input id="file" type="file" accept="image/*" class="hidden">
     </div>
+    <details id="optsBox"><summary>Options (symbole, unité de temps, calibration)</summary>
     <div class="opts">
       <div><label>Symbole (facultatif)</label><input id="symbol" placeholder="ex. XAUUSD"></div>
       <div><label>Unité de temps (facultatif)</label><input id="timeframe" placeholder="ex. M5"></div>
@@ -83,6 +95,7 @@
           <option value="mt5_colored">Bougies vert / rouge</option></select></div>
       <div><label>Calibration manuelle (facultatif)</label><input id="axis" placeholder="y1=prix1,y2=prix2"></div>
     </div>
+    </details>
     <p id="status"></p>
   </section>
 
@@ -126,6 +139,10 @@ let last = null;
 fetch("/api/health").then(r => r.json()).then(h => {
   $("health").textContent = `v${h.version} · OCR ${h.ocr ? "actif" : "indisponible (installez Tesseract)"}`;
 }).catch(() => {});
+if (window.AndroidBridge || matchMedia("(pointer: coarse)").matches) {
+  $("dropTitle").textContent = "Touchez pour choisir une capture";
+  $("dropHint").textContent = "ou partagez une image vers Scan Graph Trade depuis MetaTrader 5 ou la galerie";
+}
 
 drop.onclick = () => file.click();
 file.onchange = () => file.files[0] && send(file.files[0]);
@@ -150,6 +167,7 @@ async function send(f) {
     if (!r.ok) throw new Error(data.detail || r.statusText);
     last = data; render(data);
     $("status").textContent = "";
+    $("result").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) { $("status").textContent = "Erreur : " + e.message; }
 }
 
@@ -200,13 +218,24 @@ function render(d) {
 }
 
 function download(name, content, type) {
+  // Application Android : enregistrement natif dans « Téléchargements »
+  if (window.AndroidBridge) {
+    if (content.startsWith("data:")) window.AndroidBridge.save(name, content.split(",")[1], type || "image/png", true);
+    else window.AndroidBridge.save(name, content, type, false);
+    return;
+  }
   const a = document.createElement("a");
   a.href = content.startsWith("data:") ? content : URL.createObjectURL(new Blob([content], { type }));
   a.download = name; a.click();
 }
+// Image reçue depuis l'appli native (partage Android « Envoyer vers Scan Graph Trade »)
+window.sgtReceive = async (dataUrl, name) => {
+  const blob = await (await fetch(dataUrl)).blob();
+  send(new File([blob], name || "capture.png", { type: blob.type }));
+};
 $("dlMd").onclick = () => last && download("analyse.md", last.markdown, "text/markdown");
 $("dlJson").onclick = () => last && download("analyse.json", JSON.stringify(last.analysis, null, 2), "application/json");
-$("dlPng").onclick = () => last && download("capture-annotee.png", last.annotated);
+$("dlPng").onclick = () => last && download("capture-annotee.png", last.annotated, "image/png");
 </script>
 </body>
 </html>
