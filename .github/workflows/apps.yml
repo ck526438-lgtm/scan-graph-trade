@@ -8,7 +8,7 @@ on:
   push:
     tags: ["v*"]
     branches: [main, "feat/**"]
-    paths: ["src/**", "android/**", "packaging/**", ".github/workflows/apps.yml"]
+    paths: ["src/**", "android/**", "packaging/**", "assets/samples/**", ".github/**"]
   workflow_dispatch:
 
 permissions:
@@ -36,11 +36,14 @@ jobs:
       - name: Auto-test de l'exe (moteur + OCR embarqué)
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath dist\ScanGraphTrade.exe -ArgumentList "--selftest","assets\samples\mt5_eurusd_m5.png","selftest.json" -Wait -PassThru
-          Get-Content selftest.json
-          if ($p.ExitCode -ne 0) { exit 1 }
+          foreach ($img in "mt5_eurusd_m5.png", "test_axe_eurusd_m15.png") {
+            $p = Start-Process -FilePath dist\ScanGraphTrade.exe -ArgumentList "--selftest","assets\samples\$img","selftest.json" -Wait -PassThru
+            Write-Host "$img -> $(Get-Content selftest.json)"
+            if ($p.ExitCode -ne 0) { exit 1 }
+          }
           $r = Get-Content selftest.json | ConvertFrom-Json
           if (-not $r.ocr) { Write-Error "Tesseract non embarqué"; exit 1 }
+          if (-not $r.calibrated) { Write-Error "Axe des prix non lu"; exit 1 }
       - uses: actions/upload-artifact@v4
         with:
           name: ScanGraphTrade-Windows
@@ -89,9 +92,31 @@ jobs:
           path: out/ScanGraphTrade.apk
           if-no-files-found: error
 
+  android-test:
+    name: Android (test sur émulateur)
+    needs: android-apk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ScanGraphTrade-Android
+          path: out
+      - name: Accélération KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Installation et analyse d'une capture sur Android 10
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          disable-animations: true
+          script: bash .github/scripts/android-selftest.sh
+
   release:
     name: Publication
-    needs: [windows-exe, android-apk]
+    needs: [windows-exe, android-apk, android-test]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:

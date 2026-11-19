@@ -51,7 +51,8 @@ def selftest(image: str, out: str) -> int:
     payload = analyze_bytes(Path(image).read_bytes(), Path(image).name)
     fc = (payload.get("analysis") or {}).get("forecast") or {}
     report = {"ocr": available(), "symbol": payload["symbol"], "timeframe": payload["timeframe"],
-              "candles": payload["candles"], "verdict": fc.get("verdict"), "score": fc.get("score")}
+              "calibrated": payload["calibrated"], "candles": payload["candles"],
+              "verdict": fc.get("verdict"), "score": fc.get("score")}
     Path(out).write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
     return 0 if payload["candles"] > 0 and fc.get("verdict") else 1
 

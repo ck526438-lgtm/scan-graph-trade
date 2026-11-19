@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Base64
+import android.util.Log
 import android.view.Gravity
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -118,7 +119,12 @@ class MainActivity : AppCompatActivity() {
         thread(name = "sgt-start") {
             try {
                 if (!Python.isStarted()) Python.start(AndroidPlatform(this))
-                val port = Python.getInstance().getModule("sgt_android").callAttr("start").toInt()
+                val bridge = Python.getInstance().getModule("sgt_android")
+                val port = bridge.callAttr("start").toInt()
+                // auto-test (CI) : adb shell am start ... --es sgt_selftest /chemin/capture.png
+                intent?.getStringExtra("sgt_selftest")?.let { path ->
+                    Log.i("SGT", "SELFTEST " + bridge.callAttr("selftest", path).toString())
+                }
                 Handler(Looper.getMainLooper()).post {
                     web.loadUrl("http://127.0.0.1:$port/")
                     splash.animate().alpha(0f).setDuration(250).withEndAction {
@@ -126,6 +132,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Throwable) {
+                Log.e("SGT", "Démarrage impossible", e)
                 Handler(Looper.getMainLooper()).post {
                     splash.text = "Impossible de démarrer le moteur :\n${e.message}"
                 }

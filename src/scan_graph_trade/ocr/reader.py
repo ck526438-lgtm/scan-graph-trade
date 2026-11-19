@@ -149,9 +149,16 @@ def read_header(image: np.ndarray) -> tuple[str | None, str | None, str]:
         sym, tf = parse_header(txt)
         return sym, tf, txt
     strip = image[0:strip_h, 0 : min(w, 500)]
-    txt = pytesseract.image_to_string(_prep(strip, 4), config="--psm 7")
-    sym, tf = parse_header(txt)
-    return sym, tf, txt.strip()
+    # plusieurs lectures (agrandissement / mode de page) : les versions de Tesseract diffèrent
+    best: tuple[str | None, str | None, str] = (None, None, "")
+    for scale, psm in ((4, 7), (3, 7), (2, 7), (4, 6), (3, 11)):
+        txt = pytesseract.image_to_string(_prep(strip, scale), config=f"--psm {psm}").strip()
+        sym, tf = parse_header(txt)
+        if (sym is not None) + (tf is not None) > (best[0] is not None) + (best[1] is not None):
+            best = (sym, tf, txt)
+        if sym and tf:
+            break
+    return best
 
 
 def fit_axis(points: list[tuple[float, float]], decimals: int = 5) -> AxisCalibration | None:
