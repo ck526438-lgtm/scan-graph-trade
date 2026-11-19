@@ -6,20 +6,30 @@
 - [x] Figures en chandeliers de base
 - [x] Export CSV / JSON + CLI `sgt`
 
-## v0.2 — Robustesse
-- [ ] Recadrage automatique de la zone graphique (suppression barres d'outils, axes)
+## v0.2 — Robustesse ✅
 - [x] Profils de couleurs MetaTrader 5 + détection automatique
-- [ ] Profils TradingView, MT4, cTrader
 - [x] Détection des thèmes clair/sombre (MT5)
-- [ ] Jeu de captures réelles annotées dans `assets/samples/`
+- [x] Première capture réelle annotée dans `assets/samples/`
 
-## v0.3 — Indicateurs & figures chartistes
-- [ ] Moyennes mobiles, RSI, MACD, volumes
-- [ ] Supports / résistances, lignes de tendance
-- [ ] Double sommet/creux, triangles, tête-épaules
+## v0.3 — Analyse experte & pronostic ✅
+- [x] Indicateurs recalculés : EMA, RSI, MACD, ATR, ADX, Bollinger
+- [x] Courbes (moyennes mobiles) lues directement sur la capture
+- [x] Structure de marché : pivots, HH/HL/LH/LL, BOS, CHoCH, tendance
+- [x] Supports / résistances, obliques de tendance
+- [x] Double sommet/creux, tête-épaules, triangles, biseaux, canaux, rectangle
+- [x] 19 figures en chandeliers avec contexte (pendu vs marteau, etc.)
+- [x] Pronostic par confluence : verdict, confiance, plan de trade, scénarios
+- [x] OCR de l'en-tête (symbole, unité de temps) et de l'axe (robuste)
+- [x] Capture annotée, rapport Markdown
+- [x] Interface web glisser-déposer + API REST (FastAPI)
+
+## v0.4 — Plateformes
+- [ ] Profils TradingView, MT4, cTrader, applis mobiles de broker
+- [ ] Recadrage automatique de la zone graphique
+- [ ] Jeu de captures réelles annotées (vérité terrain) pour mesurer la précision
 
 ## v1.0 — Produit
-- [ ] Modèle IA de classification des figures
-- [ ] API REST (FastAPI)
-- [ ] Interface web avec glisser-déposer
+- [ ] Modèle IA de classification des figures (entraîné sur les captures annotées)
+- [ ] Backtest du pronostic sur historique MT5 (taux de réussite par configuration)
 - [ ] Notifications (Telegram / e-mail)
+- [ ] Application bureau Windows (.exe)
