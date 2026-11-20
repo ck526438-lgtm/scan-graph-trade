@@ -243,6 +243,36 @@ config = DetectorConfig(
 result = analyze_file("capture.png", config=config)
 ```
 
+## 📏 Précision mesurée
+
+La précision est mesurée par un banc d'essai reproductible, `tools/benchmark.py` :
+
+```bash
+python tools/benchmark.py detection            # lecture de la capture (image → bougies)
+python tools/benchmark.py forecast data/*.csv  # pronostic rejoué sur de vraies données
+```
+
+**Lecture de la capture** (graphiques MT5 dont on connaît les vraies bougies, 3 thèmes, 60 à 200 bougies) :
+
+| Capture | Nombre de bougies exact — avant | après |
+|---|---|---|
+| Nette (PNG) | 67 % | **100 %** |
+| Compressée (JPEG) | 33 % | **96 %** |
+| Capture de téléphone (haute densité + JPEG) | 11 % | **78 %** (±2 bougies : 100 %) |
+| Réduite (partage WhatsApp) | 0 % | **33 %** |
+
+Ce qui a changé : le pas entre les bougies est mesuré (MT5 les dessine à intervalle constant) et
+sert à redécouper les bougies soudées par le flou ; le texte lu par l'OCR (en-tête, heures,
+étiquettes) est effacé avant la détection ; la couleur haussière/baissière des bougies creuses
+est lue à la luminosité du corps, insensible à la teinte ajoutée par la compression.
+
+**Pronostic** : rejoué sur 15 394 bougies réelles (EURUSD M5/H1, XAUUSD M5/M15, une action en D1),
+1 655 signaux : objectif 1 atteint avant le stop dans 44 % des cas, sens juste dans 51 %,
+espérance ≈ 0 R. Un modèle ré-entraîné sur ces facteurs ne fait pas mieux hors échantillon.
+L'application affiche donc des chiffres **calibrés** — la « réussite historique » est le taux
+réellement observé, la probabilité de hausse reste proche de 50 % — plutôt qu'une confiance
+artificielle. Le pronostic est une lecture technique structurée, pas une prédiction fiable.
+
 ## 🏗️ Construire les applications
 
 Les deux applications sont construites automatiquement par GitHub Actions (`.github/workflows/apps.yml`) à chaque tag `v*` et publiées dans une Release :

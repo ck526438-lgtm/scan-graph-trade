@@ -10,7 +10,7 @@ from .detection import CandleDetector, DetectorConfig, auto_profile, get_profile
 from .detection.overlays import detect_overlays
 from .models import AnalysisResult
 from .ocr import calibrate_price_axis, extract_text
-from .ocr.reader import AxisCalibration, read_header
+from .ocr.reader import AxisCalibration, read_header, text_boxes
 from .patterns import detect_patterns
 
 
@@ -46,19 +46,21 @@ def analyze_image(image: np.ndarray, source: str = "<memory>", use_ocr: bool = T
 
     calib = axis
     texts: list[str] = []
+    boxes: list[tuple[int, int, int, int]] = []
     if use_ocr:
+        boxes = text_boxes(image)
         if calib is None:
             calib = calibrate_price_axis(image, axis_x=axis_x)
         texts = extract_text(image)
         hs, ht, _ = read_header(image)
         symbol, timeframe = symbol or hs, timeframe or ht
 
-    candles = detector.detect(image, to_price=calib)
+    candles = detector.detect(image, to_price=calib, text_boxes=boxes)
     res = AnalysisResult(source=source, candles=candles, patterns=detect_patterns(candles),
                          texts=texts, calibrated=calib is not None, profile=config.name,
                          symbol=symbol, timeframe=timeframe, image_height=image.shape[0],
                          axis=(calib.slope, calib.intercept) if calib else None,
-                         price_decimals=calib.decimals if calib else 0)
+                         price_decimals=calib.decimals if calib else 0, candle_pitch=detector.pitch)
     if candles:
         res.overlays = detect_overlays(image, config, candles[0].x, candles[-1].x)
     if technical:

@@ -121,7 +121,7 @@ def annotate(image: np.ndarray, res: AnalysisResult) -> np.ndarray:
     # bandeau du verdict
     col = GREEN if fc["verdict"] == "ACHAT" else RED if fc["verdict"] == "VENTE" else ORANGE
     title = " ".join(x for x in (res.symbol, res.timeframe) if x)
-    banner = f"{title}  {fc['verdict']}  score {fc['score']:+.0f}  confiance {fc['confidence']:.0f}%".strip()
+    banner = f"{title}  {fc['verdict']}  score {fc['score']:+.0f}  réussite hist. {fc['confidence']:.0f}%".strip()
     _text(img, _ascii(banner), (10, 44), col, 0.6, bg=(30, 30, 30))
     _text(img, "Scan Graph Trade", (10, h - 8), GREY, 0.4)
     return img

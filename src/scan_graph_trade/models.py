@@ -77,6 +77,7 @@ class AnalysisResult:
     price_decimals: int = 0
     overlays: list[Overlay] = field(default_factory=list)
     analysis: dict | None = None  # rapport d'analyse technique (voir analysis.engine)
+    candle_pitch: float | None = None  # écart en pixels entre deux bougies (qualité de la capture)
 
     # --- conversions pixel <-> prix -------------------------------------
     def y_to_price(self, y: float) -> float:
