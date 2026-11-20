@@ -39,6 +39,8 @@ def draw_mt5(series, width=900, height=500, header="EURUSD,M5", decimals=4, sche
     bg, outline, bull, bear, text = {
         "green_on_black": ((0, 0, 0), (0, 255, 0), (0, 0, 0), (255, 255, 255), (255, 255, 255)),
         "black_on_white": ((255, 255, 255), (0, 0, 0), (255, 255, 255), (0, 0, 0), (0, 0, 0)),
+        # couleurs perso vert / rouge (très courant, notamment sur MT5 mobile) : contour = couleur du corps
+        "colored": ((18, 18, 18), None, (80, 175, 76), (54, 67, 244), (200, 200, 200)),
     }[scheme]
     img = np.full((height, width, 3), bg, np.uint8)
     axis_x = width - 70
@@ -71,8 +73,10 @@ def draw_mt5(series, width=900, height=500, header="EURUSD,M5", decimals=4, sche
     half = max(1, spacing // 2 - 1)
     for i, (o, h, lw, c) in enumerate(series):
         x = 15 + i * spacing
-        cv2.line(img, (x, y(h)), (x, y(lw)), outline, 1)
+        body = bull if c > o else bear
+        edge = outline if outline is not None else body
+        cv2.line(img, (x, y(h)), (x, y(lw)), edge, 1)
         t, b = y(max(o, c)), y(min(o, c))
-        cv2.rectangle(img, (x - half, t), (x + half, max(b, t + 1)), bull if c > o else bear, -1)
-        cv2.rectangle(img, (x - half, t), (x + half, max(b, t + 1)), outline, 1)
+        cv2.rectangle(img, (x - half, t), (x + half, max(b, t + 1)), body, -1)
+        cv2.rectangle(img, (x - half, t), (x + half, max(b, t + 1)), edge, 1)
     return img

@@ -17,7 +17,7 @@ from .candles import DEFAULT_BEAR_RANGES, DEFAULT_BULL_RANGES, CandleDetector, D
 
 LIME = [((40, 70, 70), (80, 255, 255))]
 WHITE = [((0, 0, 190), (179, 60, 255))]
-BLACK = [((0, 0, 0), (179, 255, 60))]
+BLACK = [((0, 0, 0), (179, 255, 110))]  # tolérant : les traits fins grisent une fois la capture réduite
 
 # Zone utile MT5 : en-tête (symbole, timeframe), axe du temps, axe des prix à droite
 _MT5_MARGINS = dict(margin_top=18, margin_bottom=20, margin_right_fraction=0.07, detect_price_axis=True)
@@ -30,7 +30,7 @@ def _profiles() -> dict[str, DetectorConfig]:
             name="mt5_green_on_black", mode="fill", outline_ranges=LIME, bear_fill_ranges=WHITE,
             # l'en-tête est blanc (sans contour vert) : pas besoin de marge haute,
             # ce qui évite de tronquer les plus hautes mèches
-            **{**_MT5_MARGINS, "margin_top": 0},
+            **{**_MT5_MARGINS, "margin_top": 0, "fill_margin_top": 18},
         ),
         "mt5_black_on_white": DetectorConfig(
             name="mt5_black_on_white", mode="fill", outline_ranges=BLACK, bear_fill_ranges=BLACK,

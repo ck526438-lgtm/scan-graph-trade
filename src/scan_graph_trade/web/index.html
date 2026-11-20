@@ -110,6 +110,8 @@
       <h3>Probabilité de hausse</h3>
       <div class="meter"><i id="probBar" style="left:0;background:linear-gradient(90deg,#ef4a4a,#ff8c1e,#2fc46b)"></i></div>
       <div class="muted" id="probTxt"></div>
+      <h3>Fiabilité mesurée</h3>
+      <div class="muted" id="reliability"></div>
       <div id="planBox"><h3>Plan de trade</h3><table id="plan"></table></div>
       <h3>Scénarios</h3>
       <ul><li id="main"></li><li id="alt"></li></ul>
@@ -182,13 +184,15 @@ function render(d) {
   const f = a.forecast, dec = d.fmt_decimals;
   const fmt = v => v == null ? "—" : d.calibrated ? Number(v).toFixed(dec) : Math.round(v) + " px";
   $("verdict").textContent = f.verdict; $("verdict").className = "verdict " + f.verdict;
-  $("bias").textContent = `Biais ${f.bias} · confiance ${f.confidence.toFixed(0)} %`;
+  $("bias").textContent = `Biais ${f.bias} · réussite historique ${f.confidence.toFixed(0)} %`;
   const s = f.score, bar = $("scoreBar");
   bar.style.left = (s >= 0 ? 50 : 50 + s / 2) + "%"; bar.style.width = Math.abs(s) / 2 + "%";
   bar.style.background = s >= 0 ? "var(--green)" : "var(--red)";
   $("scoreTxt").textContent = (s > 0 ? "+" : "") + s.toFixed(0);
   $("probBar").style.width = f.probability_up + "%";
-  $("probTxt").textContent = `${f.probability_up.toFixed(0)} % de chances estimées que le prochain mouvement significatif soit haussier`;
+  $("probTxt").textContent = `${f.probability_up.toFixed(0)} % de chances estimées que le prochain mouvement significatif soit haussier` +
+    (Math.abs(f.probability_up - 50) < 5 ? " (proche de 50 % : pas d'avantage statistique mesuré)" : "");
+  $("reliability").textContent = (f.reliability && f.reliability.note) || "";
   $("main").textContent = f.main_scenario; $("alt").textContent = f.alt_scenario;
   $("summary").textContent = f.summary;
   $("planBox").classList.toggle("hidden", !f.plan);

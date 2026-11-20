@@ -27,6 +27,18 @@ from .structure import StructureBreak, Swing, TrendInfo, structure_breaks, trend
 BUY_THRESHOLD = 25
 MIN_CANDLES = 30
 
+# --- Fiabilité mesurée --------------------------------------------------------
+# Résultats du banc d'essai `python tools/benchmark.py forecast <csv…>` sur de vraies
+# données (EURUSD M5/H1, XAUUSD M5/M15, une action en D1 — 15 394
+# bougies, fenêtres de 150 bougies comme une capture, 48 bougies d'horizon).
+# À régénérer quand le moteur change. Ils servent à afficher des chiffres honnêtes :
+# la confiance et la probabilité affichées sont celles réellement observées.
+BACKTEST = {"signals": 1655, "win_rate": 44.2, "expectancy_r": 0.0, "direction_hit": 51.3, "candles": 15394}
+# taux de réussite du sens annoncé (prix à +1 ATR avant -1 ATR) selon |score|
+HIT_BY_SCORE = [(10, 50.0), (20, 50.4), (30, 51.1), (40, 50.2), (60, 49.7), (101, 46.2)]
+PROB_SPREAD = 3.0  # écart max de la probabilité de hausse autour de 50 % (calibré : Brier minimal)
+EXTREME_SCORE = 60
+
 
 @dataclass
 class Factor:
@@ -62,6 +74,7 @@ class Forecast:
     alt_scenario: str
     plan: TradePlan | None
     warnings: list[str] = field(default_factory=list)
+    reliability: dict = field(default_factory=dict)  # fiabilité mesurée sur historique (voir BACKTEST)
 
 
 @dataclass
@@ -269,8 +282,21 @@ def _forecast(res, factors, trend, price, a, swings, sup, resi, n, r) -> Forecas
     if r is not None and (r > 75 or r < 25):
         warnings.append("RSI extrême : éviter d'entrer en retard dans le sens du mouvement.")
 
-    confidence = round(min(95.0, abs(score) * 1.4 * (0.5 + agreement / 2) * quality + 10), 1)
-    prob_up = round(float(50 + 40 * np.tanh(raw * 1.8)), 1)
+    pitch = getattr(res, "candle_pitch", None)
+    if pitch is not None and pitch < 3.5:
+        quality *= 0.8
+        warnings.append("Bougies très serrées sur la capture (moins de 4 px) : zoomez un peu dans MT5 ou "
+                        "envoyez la capture d'origine plutôt qu'une version compressée (WhatsApp…).")
+    if abs(score) >= EXTREME_SCORE:
+        warnings.append("Tous les signaux vont dans le même sens : sur historique, ces configurations très "
+                        "étirées ont plus souvent corrigé d'abord. Préférer attendre un repli.")
+
+    # Confiance = taux de réussite réellement mesuré pour ce niveau de score (et non une formule) :
+    # sur l'historique testé, un score fort n'est PAS plus fiable qu'un score moyen.
+    hit = next(v for lim, v in HIT_BY_SCORE if abs(score) < lim)
+    confidence = round(hit * (0.9 + 0.1 * quality), 1)
+    prob_up = round(float(50 + PROB_SPREAD * np.tanh(raw * 1.8)), 1)
+    _ = agreement  # conservé dans les facteurs ; n'augmente plus artificiellement la confiance
 
     # en range sans figure confirmée, on exige davantage de confluence
     confirmed = any(f.weight >= 2.0 and f.name not in ("Tendance",) for f in factors)
@@ -320,8 +346,8 @@ def _forecast(res, factors, trend, price, a, swings, sup, resi, n, r) -> Forecas
         alt = "Si la volatilité se contracte encore, se préparer à une cassure franche (souvent dans le sens " \
               f"de la tendance de fond : {trend.direction})."
     else:
-        summary = f"{sym} : biais {bias} — {verdict} (score {score:+.0f}/100, confiance {confidence:.0f} %). " \
-                  f"{reasons}."
+        summary = f"{sym} : biais {bias} — {verdict} (score {score:+.0f}/100, " \
+                  f"réussite historique {confidence:.0f} %). {reasons}."
         tps = " puis ".join(fmt(t) for t in plan.take_profits)
         move = "de la hausse" if bias == "haussier" else "de la baisse"
         main = (f"Scénario principal : poursuite {move} vers {tps}, "
@@ -329,7 +355,17 @@ def _forecast(res, factors, trend, price, a, swings, sup, resi, n, r) -> Forecas
         other = "baissier" if bias == "haussier" else "haussier"
         alt = f"Scénario alternatif : si {fmt(plan.stop_loss)} est franchi, le scénario est invalidé et un " \
               f"mouvement {other} devient probable."
-    return Forecast(verdict, bias, score, confidence, prob_up, summary, main, alt, plan, warnings)
+    n_candles = f"{BACKTEST['candles']:,}".replace(",", " ")
+    reliability = {
+        **BACKTEST,
+        "score_hit": hit,
+        "note": (f"Testé sur {BACKTEST['signals']} signaux historiques ({n_candles} bougies réelles : EURUSD, "
+                 f"XAUUSD, une action ; M5 à D1) : objectif 1 atteint avant le stop dans "
+                 f"{BACKTEST['win_rate']:.0f} % des cas, sens juste dans {BACKTEST['direction_hit']:.0f} % des "
+                 "cas, espérance proche de 0 R. Ce pronostic est une "
+                 "lecture technique structurée, pas une prédiction fiable : gérez toujours votre risque."),
+    }
+    return Forecast(verdict, bias, score, confidence, prob_up, summary, main, alt, plan, warnings, reliability)
 
 
 def _plan(direction: str, entry: float, stop: float, level: Level | None, a: float) -> TradePlan:

@@ -25,8 +25,10 @@ def render_report(res: AnalysisResult, markdown: bool = False) -> str:
     fc = ta["forecast"]
     lines.append(H("PRONOSTIC"))
     lines.append(f"{B}Verdict : {fc['verdict']}  (biais {fc['bias']}, score {fc['score']:+.0f}/100, "
-                 f"confiance {fc['confidence']:.0f} %)")
+                 f"réussite historique {fc['confidence']:.0f} %)")
     lines.append(f"{B}Probabilité estimée d'un prochain mouvement haussier : {fc['probability_up']:.0f} %")
+    if fc.get("reliability", {}).get("note"):
+        lines.append(f"{B}Fiabilité mesurée : {fc['reliability']['note']}")
     lines.append(f"{B}{fc['summary']}")
     lines.append(f"{B}{fc['main_scenario']}")
     lines.append(f"{B}{fc['alt_scenario']}")

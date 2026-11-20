@@ -100,6 +100,47 @@ def _prep(img: np.ndarray, scale: int = 3) -> np.ndarray:
     return g
 
 
+_LABEL = re.compile(r"[A-Za-z]{3,}|\d[\d.,:]{2,}")
+_tess_cache: tuple[int, list[dict]] | None = None
+
+
+def _tesseract_words(image: np.ndarray) -> list[dict]:
+    global _tess_cache
+    key = hash((image.shape, image[:: max(1, image.shape[0] // 64), :: max(1, image.shape[1] // 64)].tobytes()))
+    if _tess_cache is not None and _tess_cache[0] == key:
+        return _tess_cache[1]
+    words: list[dict] = []
+    try:
+        d = pytesseract.image_to_data(_prep(image, 2), output_type=pytesseract.Output.DICT, config="--psm 11")
+        for t, x, y, w, h, conf in zip(d["text"], d["left"], d["top"], d["width"], d["height"], d["conf"],
+                                       strict=False):
+            if t.strip() and float(conf) >= 70:
+                words.append({"text": t.strip(), "x": x / 2, "y": y / 2, "w": w / 2, "h": h / 2})
+    except Exception:  # noqa: BLE001
+        words = []
+    _tess_cache = (key, words)
+    return words
+
+
+def text_boxes(image: np.ndarray) -> list[tuple[int, int, int, int]]:
+    """Boîtes (x, y, w, h) du texte de la capture (en-tête, graduations, heures, étiquettes).
+
+    Elles sont effacées avant de chercher les bougies : sinon un texte de la même
+    couleur qu'une bougie (en-tête blanc de MT5, heures noires sur fond blanc…)
+    se colle aux bougies voisines ou est pris pour une bougie.
+    """
+    if not available():
+        return []
+    words = _words(image) if _word_provider is not None else _tesseract_words(image)
+    h, w = image.shape[:2]
+    out = []
+    for wd in words:
+        if not _LABEL.search(str(wd["text"])) or wd["w"] > 0.4 * w or wd["h"] > 0.06 * h:
+            continue
+        out.append((int(wd["x"]), int(wd["y"]), int(np.ceil(wd["w"])), int(np.ceil(wd["h"]))))
+    return out
+
+
 def extract_text(image: np.ndarray, lang: str = "eng") -> list[str]:
     """Extrait les lignes de texte (symbole, timeframe, valeurs d'indicateurs…)."""
     if _word_provider is not None:

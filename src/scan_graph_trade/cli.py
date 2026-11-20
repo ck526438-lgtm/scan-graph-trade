@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
                            symbol=args.symbol, timeframe=args.timeframe)
         if args.quiet and res.analysis:
             fc = res.analysis["forecast"]
-            print(f"{fc['verdict']} score={fc['score']:+.0f} confiance={fc['confidence']:.0f}%")
+            print(f"{fc['verdict']} score={fc['score']:+.0f} reussite_hist={fc['confidence']:.0f}%")
         else:
             print(render_report(res))
         if args.annotate:
