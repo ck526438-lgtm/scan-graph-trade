@@ -13,7 +13,9 @@ EURUSD = SAMPLES / "mt5_eurusd_m5.png"
 def test_mt5_eurusd_m5_capture():
     res = analyze_file(EURUSD, use_ocr=False)
     assert res.profile == "mt5_green_on_black"
-    assert 320 <= len(res.candles) <= 345  # ~332 bougies visibles
+    # 353 emplacements de bougie (pas de 4 px de x=76 à x=1484), dont 1 vide : 352 bougies.
+    # (avant le redécoupage des bougies collées, ~20 bougies serrées étaient fusionnées)
+    assert 348 <= len(res.candles) <= 354
     bears = sum(not c.bullish for c in res.candles)
     assert 0.3 < bears / len(res.candles) < 0.5
     # la plus haute mèche (sommet, x≈1340, y=16 px) n'est pas tronquée par l'en-tête

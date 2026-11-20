@@ -1,0 +1,138 @@
+name: Applications (.exe / .apk)
+
+# Construit l'application Windows (.exe) et Android (.apk).
+# - à chaque tag « v* » : publication dans une Release GitHub ;
+# - à chaque push sur main ou une branche feat/** (si le code change) et à la demande :
+#   fichiers téléchargeables dans l'onglet Actions > « Artifacts ».
+on:
+  push:
+    tags: ["v*"]
+    branches: [main, "feat/**"]
+    paths: ["src/**", "android/**", "packaging/**", "assets/samples/**", ".github/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows-exe:
+    name: Windows (.exe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tesseract OCR (embarqué dans l'exe)
+        run: choco install tesseract -y --no-progress
+      - name: Dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install . "pywebview>=5.0" "pyinstaller>=6.6"
+      - name: Construction de ScanGraphTrade.exe
+        env:
+          TESSERACT_DIR: C:\Program Files\Tesseract-OCR
+        run: pyinstaller packaging/windows/ScanGraphTrade.spec --noconfirm
+      - name: Auto-test de l'exe (moteur + OCR embarqué)
+        shell: pwsh
+        run: |
+          foreach ($img in "mt5_eurusd_m5.png", "test_axe_eurusd_m15.png") {
+            $p = Start-Process -FilePath dist\ScanGraphTrade.exe -ArgumentList "--selftest","assets\samples\$img","selftest.json" -Wait -PassThru
+            Write-Host "$img -> $(Get-Content selftest.json)"
+            if ($p.ExitCode -ne 0) { exit 1 }
+          }
+          $r = Get-Content selftest.json | ConvertFrom-Json
+          if (-not $r.ocr) { Write-Error "Tesseract non embarqué"; exit 1 }
+          if (-not $r.calibrated) { Write-Error "Axe des prix non lu"; exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScanGraphTrade-Windows
+          path: dist/ScanGraphTrade.exe
+          if-no-files-found: error
+
+  android-apk:
+    name: Android (.apk)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        id: py
+        with:
+          python-version: "3.10"  # même version que le Python embarqué (Chaquopy)
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Clé de signature (facultative, secrets GitHub)
+        env:
+          KEYSTORE_B64: ${{ secrets.SGT_KEYSTORE_BASE64 }}
+        if: env.KEYSTORE_B64 != ''
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/sgt.jks"
+          echo "SGT_KEYSTORE=$RUNNER_TEMP/sgt.jks" >> "$GITHUB_ENV"
+      - name: Construction de l'APK
+        working-directory: android
+        env:
+          SGT_BUILD_PYTHON: ${{ steps.py.outputs.python-path }}
+          SGT_KEYSTORE_PASSWORD: ${{ secrets.SGT_KEYSTORE_PASSWORD }}
+          SGT_KEY_ALIAS: ${{ secrets.SGT_KEY_ALIAS }}
+          SGT_KEY_PASSWORD: ${{ secrets.SGT_KEY_PASSWORD }}
+        run: gradle assembleRelease --no-daemon --stacktrace
+      - name: Renommage
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release.apk out/ScanGraphTrade.apk
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScanGraphTrade-Android
+          path: out/ScanGraphTrade.apk
+          if-no-files-found: error
+
+  android-test:
+    name: Android (test sur émulateur)
+    needs: android-apk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ScanGraphTrade-Android
+          path: out
+      - name: Accélération KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Installation et analyse d'une capture sur Android 10
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          disable-animations: true
+          script: bash .github/scripts/android-selftest.sh
+
+  release:
+    name: Publication
+    needs: [windows-exe, android-apk, android-test]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Scan Graph Trade ${{ github.ref_name }}
+          files: |
+            dist/ScanGraphTrade.exe
+            dist/ScanGraphTrade.apk
+          body: |
+            ## Télécharger
+            - **Windows** : `ScanGraphTrade.exe` — double-cliquez, aucune installation (OCR Tesseract inclus). Si Windows SmartScreen s'affiche : « Informations complémentaires » → « Exécuter quand même ».
+            - **Android** : `ScanGraphTrade.apk` — ouvrez le fichier sur le téléphone et autorisez l'installation depuis cette source (Android 7 ou plus récent).
+
+            Tout est analysé **sur l'appareil**, hors ligne. Analyse automatique à but informatif, pas un conseil en investissement.
